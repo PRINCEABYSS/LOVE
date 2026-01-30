@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Для моей любимой</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Montserrat:wght@300&display=swap');
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #05010a;
+            font-family: 'Montserrat', sans-serif;
+            /* Отключаем выделение текста и "синие вспышки" при клике на мобилках */
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            touch-action: none;
+        }
+
+        canvas { display: block; position: fixed; top: 0; left: 0; }
+
+        #overlay {
+            position: absolute;
+            top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            pointer-events: none;
+            z-index: 10;
+            width: 90%;
+        }
+
+        h1 {
+            font-family: 'Caveat', cursive;
+            /* Адаптивный размер: от 2rem до 4rem в зависимости от ширины */
+            font-size: clamp(2rem, 10vw, 4rem);
+            margin: 0;
+            text-shadow: 0 0 20px rgba(255, 105, 180, 0.8);
+            animation: fadeIn 3s forwards;
+        }
+
+        .heart-icon {
+            color: #ff4d6d;
+            font-size: clamp(2.5rem, 8vw, 3.5rem);
+            margin-top: 10px;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+
+        #timer {
+            position: absolute;
+            bottom: 40px; /* Чуть выше для мобильных панелей */
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            font-size: clamp(0.75rem, 4vw, 0.9rem);
+            letter-spacing: 1px;
+            z-index: 10;
+            width: 100%;
+            line-height: 1.5;
+        }
+
+        #time-counter {
+            font-weight: bold;
+            color: #ffb6c1;
+            display: block;
+            margin-top: 5px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px #ff4d6d); }
+            50% { transform: scale(1.15); filter: drop-shadow(0 0 15px #ff4d6d); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 5px #ff4d6d); }
+        }
+
+        .message-box {
+            position: absolute;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1.1rem, 5vw, 1.5rem);
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transform: scale(0.5) translate(-50%, -50%);
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* Чтобы текст не переносился на узких экранах */
+            white-space: nowrap; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <h1 id="main-title">Ты — целая вселенная</h1>
+        <div class="heart-icon">❤</div>
+    </div>
+
+    <div id="timer">Мы счастливы вместе уже: <span id="time-counter">...</span></div>
+
+    <canvas id="starCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('starCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let stars = [];
+
+        const messages = [
+            "Ты — мой лучший выбор ❤️",
+            "Рядом с тобой я дома 🏠",
+            "Твой смех — моя музыка 🎶",
+            "Ценю каждую секунду ⏳",
+            "Ты делаешь меня лучше 🌟",
+            "В твоих глазах — моё будущее ✨",
+            "Люблю тебя сильнее всех 📈",
+            "Ты — моё вдохновение ⚓",
+            "Самое уютное место — твои объятия 🤗",
+            "Ты невероятно красивая ✨",
+            "Моё сердце для тебя ❤️",
+            "Ты — мой свет 🌤️",
+            "Моя большая удача 🍀",
+            "Хочу быть с тобой вечно 🌍",
+            "Твоя доброта спасает мир 🌸"
+        ];
+
+        // --- УКАЖИ СВОЮ ДАТУ ТУТ ---
+        const startDate = new Date('2023-09-15T00:00:00'); 
+
+        function updateTimer() {
+            const now = new Date();
+            const diff = now - startDate;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const mins = Math.floor((diff / 1000 / 60) % 60);
+            const secs = Math.floor((diff / 1000) % 60);
+            document.getElementById('time-counter').textContent = 
+                `${days}д. ${hours}ч. ${mins}м. ${secs}с.`;
+        }
+        setInterval(updateTimer, 1000);
+
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            stars = [];
+            for(let i=0; i<150; i++) { // Чуть меньше звезд для производительности мобилок
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 1.5,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 2;
+                this.speedY = (Math.random() - 0.5) * 2;
+                this.color = `hsl(${Math.random() * 40 + 330}, 100%, 75%)`;
+                this.life = 1;
+            }
+            update() {
+                this.x += this.speedX; this.y += this.speedY;
+                this.life -= 0.02;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = '#05010a';
+            ctx.globalAlpha = 1;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            stars.forEach(s => {
+                ctx.fillStyle = 'white';
+                ctx.globalAlpha = 0.3 + Math.abs(Math.sin(Date.now() * 0.001 + s.phase)) * 0.7;
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+            });
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) { particles.splice(i, 1); i--; }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function spawnMessages(e) {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+
+            for(let i = 0; i < 2; i++) {
+                const msg = document.createElement('div');
+                msg.className = 'message-box';
+                msg.textContent = messages[Math.floor(Math.random() * messages.length)];
+                
+                const offsetX = (Math.random() - 0.5) * 120;
+                const offsetY = (Math.random() - 0.5) * 120;
+                
+                msg.style.left = x + 'px';
+                msg.style.top = y + 'px';
+                
+                document.body.appendChild(msg);
+
+                setTimeout(() => {
+                    msg.style.opacity = '1';
+                    msg.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) scale(1)`;
+                }, 10);
+
+                setTimeout(() => {
+                    msg.style.opacity = '0';
+                    msg.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY} - 50px)) scale(0.8)`;
+                    setTimeout(() => msg.remove(), 600);
+                }, 2500);
+            }
+        }
+
+        function createTrail(e) {
+            const x = e.touches ? e.touches[0].clientX : e.clientX;
+            const y = e.touches ? e.touches[0].clientY : e.clientY;
+            for(let i=0; i<2; i++) particles.push(new Particle(x, y));
+        }
+
+        window.addEventListener('mousemove', createTrail);
+        window.addEventListener('touchmove', createTrail);
+        window.addEventListener('mousedown', spawnMessages);
+        window.addEventListener('touchstart', (e) => {
+            createTrail(e);
+            spawnMessages(e);
+        });
+
+        init(); animate();
+        window.addEventListener('resize', init);
+    </script>
+</body>
+</html>
